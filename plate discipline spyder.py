@@ -42,7 +42,7 @@ from scipy.stats import linregress
 
 fig, ax = plt.subplots()
 
-#plot the correlation table as bar plot
+#-----plot the correlation table as bar plot----------------------
 ax.bar(df_corr_new.index, df_corr_new['plated'])
 
 ax.set_xticklabels(df_corr_new.index, rotation=90)
@@ -51,364 +51,162 @@ ax.set_ylabel('correlation coefficent with plate discipline')
 
 plt.show()
 
-#---------------------------------------------------------------------------
-#plot a scatter plot between plate discipline and per game war
-plt.plot(df_new['plated'], df_new['per_war'], 'o', alpha=0.2)
-
-#plot the linear regression line 
-res = linregress(df_new['plated'], df_new['per_war'])
-fx = np.array([df_new['plated'].min(), df_new['plated'].max()])
-fy = res.intercept + res.slope * fx
-plt.plot(fx, fy)
-
-plt.xlabel('plate discipline')
-plt.ylabel('per_game_war')
-plt.show()
-
-#perform pairs bootstrap for linear regression
+#-----plot linear regression line and pairs bootstraps and compute ratio---------------------------------------
 def draw_bs_pairs_linreg(x, y, size=1):
-    #set up array of indices to sample from: inds
+    """Perform pairs bootstrap for linear regression."""
+    # Set up array of indices to sample from: inds
     inds = np.arange(len(x))
-    #initialize replicates: bs_slope_reps, bs_intercept_reps
+    # Initialize replicates: bs_slope_reps, bs_intercept_reps
     bs_slope_reps = np.empty(size)
     bs_intercept_reps = np.empty(size)
-    #generate replicates
+    # Generate replicates
     for i in range(size):
         bs_inds = np.random.choice(inds, size=len(inds))
         bs_x, bs_y = x[bs_inds], y[bs_inds]
         bs_slope_reps[i], bs_intercept_reps[i] = np.polyfit(bs_x, bs_y, 1)
-
     return bs_slope_reps, bs_intercept_reps
-#generate replicates of slope and intercept using pairs bootstrap
-bs_slope_reps, bs_intercept_reps = draw_bs_pairs_linreg(
+# Compute the linear regressions
+slope_perwar, intercept_perwar = np.polyfit(df_new['plated'], df_new['per_war'], 1)
+
+# Perform pairs bootstrap for the linear regressions
+bs_slope_reps_perwar, bs_intercept_reps_perwar = draw_bs_pairs_linreg(
                     df_new['plated'], df_new['per_war'], size=1000)
-#generate array of x-values for bootstrap lines: x
-x = np.array([0, 100])
-#plot the bootstrap lines
+
+# Compute confidence intervals of slopes
+slope_conf_int_perwar = np.percentile(bs_slope_reps_perwar, [2.5, 97.5])
+
+intercept_conf_int_perwar = np.percentile(
+                            bs_intercept_reps_perwar, [2.5, 97.5])
+
+# Print the results
+print('perwar: slope =', slope_perwar,
+      'conf int =', slope_conf_int_perwar)
+print('perwar: intercept =', intercept_perwar,
+      'conf int =', intercept_conf_int_perwar)
+
+# Make scatter plot
+_ = plt.plot(df_new['plated'], df_new['per_war'], marker='.',
+             linestyle='none', color='blue', alpha=0.5)
+
+# Label axes and make legend
+_ = plt.xlabel('plate discipline')
+_ = plt.ylabel('per game war')
+
+# Generate x-values for bootstrap lines: x
+x = np.array([0, 5])
+# Plot the bootstrap lines
 for i in range(100):
-    _ = plt.plot(x, 
-                 bs_slope_reps[i] * x + bs_intercept_reps[i],
-                 linewidth=0.5, alpha=0.2, color='red')
-#plot the data
-_ = plt.plot(df_new['plated'], df_new['per_war'], marker='.', linestyle='none')
-#label axes, set the margins, and show the plot
-_ = plt.xlabel('plated')
-_ = plt.ylabel('per_war')
-plt.margins(0.02)
+    plt.plot(x, bs_slope_reps_perwar[i] * x + bs_intercept_reps_perwar[i],
+             linewidth=0.5, alpha=0.2, color='blue')
+
+# Draw the plot again
 plt.show()
 
-#----------------------------------------------------------------------
-##plot a scatter plot between plate discipline and wRC+
-plt.plot(df_new['plated'], df_new['wRC+'], 'o', alpha=0.2)
+# Compute ratios
+ratio_perwar = df_new['per_war'] / df_new['plated']
 
-#plot the linear regression line 
-res = linregress(df_new['plated'], df_new['wRC+'])
-fx = np.array([df_new['plated'].min(), df_new['plated'].max()])
-fy = res.intercept + res.slope * fx
-plt.plot(fx, fy)
+# Compute means
+mean_ratio_perwar = np.mean(ratio_perwar)
 
-plt.xlabel('plate discipline')
-plt.ylabel('wRC+')
-plt.show()
+def bootstrap_replicate_1d(data, func):
+    """Generate bootstrap replicate of 1D data."""
+    bs_sample = np.random.choice(data, len(data))
+    return func(bs_sample)
 
-#perform pairs bootstrap for linear regression
-def draw_bs_pairs_linreg(x, y, size=1):
-    #set up array of indices to sample from: inds
-    inds = np.arange(len(x))
-    #initialize replicates: bs_slope_reps, bs_intercept_reps
-    bs_slope_reps = np.empty(size)
-    bs_intercept_reps = np.empty(size)
-    #generate replicates
+def draw_bs_reps(data, func, size=1):
+    """Draw bootstrap replicates."""
+
+    # Initialize array of replicates: bs_replicates
+    bs_replicates = np.empty(size)
+    
+    # Generate replicates
     for i in range(size):
-        bs_inds = np.random.choice(inds, size=len(inds))
-        bs_x, bs_y = x[bs_inds], y[bs_inds]
-        bs_slope_reps[i], bs_intercept_reps[i] = np.polyfit(bs_x, bs_y, 1)
+        bs_replicates[i] = bootstrap_replicate_1d(data, func)
 
-    return bs_slope_reps, bs_intercept_reps
-#generate replicates of slope and intercept using pairs bootstrap
-bs_slope_reps, bs_intercept_reps = draw_bs_pairs_linreg(
-                    df_new['plated'], df_new['wRC+'], size=1000)
-#generate array of x-values for bootstrap lines: x
-x = np.array([0, 100])
-#plot the bootstrap lines
-for i in range(100):
-    _ = plt.plot(x, 
-                 bs_slope_reps[i] * x + bs_intercept_reps[i],
-                 linewidth=0.5, alpha=0.2, color='red')
-#plot the data
-_ = plt.plot(df_new['plated'], df_new['wRC+'], marker='.', linestyle='none')
-#label axes, set the margins, and show the plot
-_ = plt.xlabel('plated')
-_ = plt.ylabel('wRC+')
-plt.margins(0.02)
-plt.show()
-#-----------------------------------------------------------------------
-#plot a scatter plot between plate discipline and wOBA
-plt.plot(df_new['plated'], df_new['wOBA'], 'o', alpha=0.2)
+    return bs_replicates
 
-#plot the linear regression line 
-res = linregress(df_new['plated'], df_new['wOBA'])
-fx = np.array([df_new['plated'].min(), df_new['plated'].max()])
-fy = res.intercept + res.slope * fx
-plt.plot(fx, fy)
+# Generate bootstrap replicates of the means
+bs_replicates_perwar = draw_bs_reps(ratio_perwar, np.mean, size=10000)
 
-plt.xlabel('plate discipline')
-plt.ylabel('wOBA')
-plt.show()
+# Compute the 99% confidence intervals
+conf_int_perwar = np.percentile(bs_replicates_perwar, [0.5, 99.5])
 
-#perform pairs bootstrap for linear regression
-def draw_bs_pairs_linreg(x, y, size=1):
-    #set up array of indices to sample from: inds
+# Print the results
+print('war per game: mean ratio =', mean_ratio_perwar,
+      'conf int =', conf_int_perwar)
+
+
+#-----check correlation and heritability-------------------------------------------------------------------------
+
+def draw_bs_pairs(x, y, func, size=1):
+    """Perform pairs bootstrap for a single statistic."""
+    # Set up array of indices to sample from: inds
     inds = np.arange(len(x))
-    #initialize replicates: bs_slope_reps, bs_intercept_reps
-    bs_slope_reps = np.empty(size)
-    bs_intercept_reps = np.empty(size)
-    #generate replicates
+    # Initialize replicates: bs_replicates
+    bs_replicates = np.empty(size)
+    # Generate replicates
     for i in range(size):
-        bs_inds = np.random.choice(inds, size=len(inds))
+        bs_inds = np.random.choice(inds, len(inds))
         bs_x, bs_y = x[bs_inds], y[bs_inds]
-        bs_slope_reps[i], bs_intercept_reps[i] = np.polyfit(bs_x, bs_y, 1)
+        bs_replicates[i] = func(bs_x, bs_y)
+    return bs_replicates
 
-    return bs_slope_reps, bs_intercept_reps
-#generate replicates of slope and intercept using pairs bootstrap
-bs_slope_reps, bs_intercept_reps = draw_bs_pairs_linreg(
-                    df_new['plated'], df_new['wOBA'], size=1000)
-#generate array of x-values for bootstrap lines: x
-x = np.array([0, 100])
-#plot the bootstrap lines
-for i in range(100):
-    _ = plt.plot(x, 
-                 bs_slope_reps[i] * x + bs_intercept_reps[i],
-                 linewidth=0.5, alpha=0.2, color='red')
-#plot the data
-_ = plt.plot(df_new['plated'], df_new['wOBA'], marker='.', linestyle='none')
-#label axes, set the margins, and show the plot
-_ = plt.xlabel('plated')
-_ = plt.ylabel('wOBA')
-plt.margins(0.02)
-plt.show()
-#-----------------------------------------------------------------------
-#plot a scatter plot between plate discipline and ISO
-plt.plot(df_new['plated'], df_new['ISO'], 'o', alpha=0.2)
+def pearson_r(x, y):
+    """Compute Pearson correlation coefficient between two arrays."""
+    # Compute correlation matrix: corr_mat
+    corr_mat = np.corrcoef(x, y)
 
-#plot the linear regression line 
-res = linregress(df_new['plated'], df_new['ISO'])
-fx = np.array([df_new['plated'].min(), df_new['plated'].max()])
-fy = res.intercept + res.slope * fx
-plt.plot(fx, fy)
+    # Return entry [0,1]
+    return corr_mat[0,1]
 
-plt.xlabel('plate discipline')
-plt.ylabel('ISO')
-plt.show()
+# Compute the Pearson correlation coefficients
+r_perwar = pearson_r(df_new['plated'], df_new['per_war'])
 
-#perform pairs bootstrap for linear regression
-def draw_bs_pairs_linreg(x, y, size=1):
-    #set up array of indices to sample from: inds
-    inds = np.arange(len(x))
-    #initialize replicates: bs_slope_reps, bs_intercept_reps
-    bs_slope_reps = np.empty(size)
-    bs_intercept_reps = np.empty(size)
-    #generate replicates
-    for i in range(size):
-        bs_inds = np.random.choice(inds, size=len(inds))
-        bs_x, bs_y = x[bs_inds], y[bs_inds]
-        bs_slope_reps[i], bs_intercept_reps[i] = np.polyfit(bs_x, bs_y, 1)
+# Acquire 1000 bootstrap replicates of Pearson r
+bs_replicates_perwar = draw_bs_pairs(
+        df_new['plated'], df_new['per_war'], pearson_r, size=1000)
 
-    return bs_slope_reps, bs_intercept_reps
-#generate replicates of slope and intercept using pairs bootstrap
-bs_slope_reps, bs_intercept_reps = draw_bs_pairs_linreg(
-                    df_new['plated'], df_new['ISO'], size=1000)
-#generate array of x-values for bootstrap lines: x
-x = np.array([0, 100])
-#plot the bootstrap lines
-for i in range(100):
-    _ = plt.plot(x, 
-                 bs_slope_reps[i] * x + bs_intercept_reps[i],
-                 linewidth=0.5, alpha=0.2, color='red')
-#plot the data
-_ = plt.plot(df_new['plated'], df_new['ISO'], marker='.', linestyle='none')
-#label axes, set the margins, and show the plot
-_ = plt.xlabel('plated')
-_ = plt.ylabel('ISO')
-plt.margins(0.02)
-plt.show()
-#----------------------------------------------------------------------
-#plot a scatter plot between plate discipline and OBP
-plt.plot(df_new['plated'], df_new['OBP'], 'o', alpha=0.2)
+# Compute 95% confidence intervals
+conf_int_perwar = np.percentile(bs_replicates_perwar, [2.5, 97.5])
 
-#plot the linear regression line 
-res = linregress(df_new['plated'], df_new['OBP'])
-fx = np.array([df_new['plated'].min(), df_new['plated'].max()])
-fy = res.intercept + res.slope * fx
-plt.plot(fx, fy)
+# Print results
+print('per_war_corr_coef', r_perwar, conf_int_perwar)
 
-plt.xlabel('plate discipline')
-plt.ylabel('OBP')
-plt.show()
+def heritability(parents, offspring):
+    """Compute the heritability from parent and offspring samples."""
+    covariance_matrix = np.cov(parents, offspring)
+    return covariance_matrix[0,1] / covariance_matrix[0,0]
+# Compute the heritability
+heritability_perwar = heritability(df_new['plated'],
+                                     df_new['per_war'])
 
-#perform pairs bootstrap for linear regression
-def draw_bs_pairs_linreg(x, y, size=1):
-    #set up array of indices to sample from: inds
-    inds = np.arange(len(x))
-    #initialize replicates: bs_slope_reps, bs_intercept_reps
-    bs_slope_reps = np.empty(size)
-    bs_intercept_reps = np.empty(size)
-    #generate replicates
-    for i in range(size):
-        bs_inds = np.random.choice(inds, size=len(inds))
-        bs_x, bs_y = x[bs_inds], y[bs_inds]
-        bs_slope_reps[i], bs_intercept_reps[i] = np.polyfit(bs_x, bs_y, 1)
+# Acquire 1000 bootstrap replicates of heritability
+replicates_perwar = draw_bs_pairs(
+        df_new['plated'], df_new['per_war'], heritability, size=1000)
 
-    return bs_slope_reps, bs_intercept_reps
-#generate replicates of slope and intercept using pairs bootstrap
-bs_slope_reps, bs_intercept_reps = draw_bs_pairs_linreg(
-                    df_new['plated'], df_new['OBP'], size=1000)
-#generate array of x-values for bootstrap lines: x
-x = np.array([0, 100])
-#plot the bootstrap lines
-for i in range(100):
-    _ = plt.plot(x, 
-                 bs_slope_reps[i] * x + bs_intercept_reps[i],
-                 linewidth=0.5, alpha=0.2, color='red')
-#plot the data
-_ = plt.plot(df_new['plated'], df_new['wRC+'], marker='.', linestyle='none')
-#label axes, set the margins, and show the plot
-_ = plt.xlabel('plated')
-_ = plt.ylabel('OBP')
-plt.margins(0.02)
-plt.show()
-#----------------------------------------------------------------------
-#plot a scatter plot between plate discipline and AVG
-plt.plot(df_new['plated'], df_new['AVG'], 'o', alpha=0.2)
+# Compute 95% confidence intervals
+conf_int_perwar = np.percentile(replicates_perwar, [2.5, 97.5])
 
-#plot the linear regression line 
-res = linregress(df_new['plated'], df_new['AVG'])
-fx = np.array([df_new['plated'].min(), df_new['plated'].max()])
-fy = res.intercept + res.slope * fx
-plt.plot(fx, fy)
+# Print results
+print('per_war_heritability', heritability_perwar, conf_int_perwar)
 
-plt.xlabel('plate discipline')
-plt.ylabel('AVG')
-plt.show()
+# Initialize array of replicates: perm_replicates
+perm_replicates = np.empty(10000)
 
-#perform pairs bootstrap for linear regression
-def draw_bs_pairs_linreg(x, y, size=1):
-    #set up array of indices to sample from: inds
-    inds = np.arange(len(x))
-    #initialize replicates: bs_slope_reps, bs_intercept_reps
-    bs_slope_reps = np.empty(size)
-    bs_intercept_reps = np.empty(size)
-    #generate replicates
-    for i in range(size):
-        bs_inds = np.random.choice(inds, size=len(inds))
-        bs_x, bs_y = x[bs_inds], y[bs_inds]
-        bs_slope_reps[i], bs_intercept_reps[i] = np.polyfit(bs_x, bs_y, 1)
+# Draw replicates
+for i in range(10000):
+    # Permute parent beak depths
+    bd_parent_permuted = np.random.permutation(df_new['plated'])
+    perm_replicates[i] = heritability(df_new['plated'],
+                                      df_new['per_war'])
 
-    return bs_slope_reps, bs_intercept_reps
-#generate replicates of slope and intercept using pairs bootstrap
-bs_slope_reps, bs_intercept_reps = draw_bs_pairs_linreg(
-                    df_new['plated'], df_new['AVG'], size=1000)
-#generate array of x-values for bootstrap lines: x
-x = np.array([0, 100])
-#plot the bootstrap lines
-for i in range(100):
-    _ = plt.plot(x, 
-                 bs_slope_reps[i] * x + bs_intercept_reps[i],
-                 linewidth=0.5, alpha=0.2, color='red')
-#plot the data
-_ = plt.plot(df_new['plated'], df_new['wRC+'], marker='.', linestyle='none')
-#label axes, set the margins, and show the plot
-_ = plt.xlabel('plated')
-_ = plt.ylabel('AVG')
-plt.margins(0.02)
-plt.show()
-#-----------------------------------------------------------------------
-#plot a scatter plot between plate discipline and K%
-plt.plot(df_new['plated'], df_new['K%'], 'o', alpha=0.2)
+# Compute p-value: p
+p = np.sum(perm_replicates >= heritability_perwar) / len(perm_replicates)
 
-#plot the linear regression line 
-res = linregress(df_new['plated'], df_new['K%'])
-fx = np.array([df_new['plated'].min(), df_new['plated'].max()])
-fy = res.intercept + res.slope * fx
-plt.plot(fx, fy)
+# Print the p-value
+print('p-val =', p)
 
-plt.xlabel('plate discipline')
-plt.ylabel('K%')
-plt.show()
+#-----above are all examples of relation between plate discipline and war per game. 
+#-----we can also generate the same calculations and plot with BB%, K%, AVG, OBP, ISO, wOBA, wRC+
 
-#perform pairs bootstrap for linear regression
-def draw_bs_pairs_linreg(x, y, size=1):
-    #set up array of indices to sample from: inds
-    inds = np.arange(len(x))
-    #initialize replicates: bs_slope_reps, bs_intercept_reps
-    bs_slope_reps = np.empty(size)
-    bs_intercept_reps = np.empty(size)
-    #generate replicates
-    for i in range(size):
-        bs_inds = np.random.choice(inds, size=len(inds))
-        bs_x, bs_y = x[bs_inds], y[bs_inds]
-        bs_slope_reps[i], bs_intercept_reps[i] = np.polyfit(bs_x, bs_y, 1)
 
-    return bs_slope_reps, bs_intercept_reps
-#generate replicates of slope and intercept using pairs bootstrap
-bs_slope_reps, bs_intercept_reps = draw_bs_pairs_linreg(
-                    df_new['plated'], df_new['K%'], size=1000)
-#generate array of x-values for bootstrap lines: x
-x = np.array([0, 100])
-#plot the bootstrap lines
-for i in range(100):
-    _ = plt.plot(x, 
-                 bs_slope_reps[i] * x + bs_intercept_reps[i],
-                 linewidth=0.5, alpha=0.2, color='red')
-#plot the data
-_ = plt.plot(df_new['plated'], df_new['wRC+'], marker='.', linestyle='none')
-#label axes, set the margins, and show the plot
-_ = plt.xlabel('plated')
-_ = plt.ylabel('K%')
-plt.margins(0.02)
-plt.show()
-#-----------------------------------------------------------------------
-#plot a scatter plot between plate discipline and BB%
-plt.plot(df_new['plated'], df_new['BB%'], 'o', alpha=0.2)
-
-#plot the linear regression line 
-res = linregress(df_new['plated'], df_new['BB%'])
-fx = np.array([df_new['plated'].min(), df_new['plated'].max()])
-fy = res.intercept + res.slope * fx
-plt.plot(fx, fy)
-
-plt.xlabel('plate discipline')
-plt.ylabel('BB%')
-plt.show()
-
-#perform pairs bootstrap for linear regression
-def draw_bs_pairs_linreg(x, y, size=1):
-    #set up array of indices to sample from: inds
-    inds = np.arange(len(x))
-    #initialize replicates: bs_slope_reps, bs_intercept_reps
-    bs_slope_reps = np.empty(size)
-    bs_intercept_reps = np.empty(size)
-    #generate replicates
-    for i in range(size):
-        bs_inds = np.random.choice(inds, size=len(inds))
-        bs_x, bs_y = x[bs_inds], y[bs_inds]
-        bs_slope_reps[i], bs_intercept_reps[i] = np.polyfit(bs_x, bs_y, 1)
-
-    return bs_slope_reps, bs_intercept_reps
-#generate replicates of slope and intercept using pairs bootstrap
-bs_slope_reps, bs_intercept_reps = draw_bs_pairs_linreg(
-                    df_new['plated'], df_new['BB%'], size=1000)
-#generate array of x-values for bootstrap lines: x
-x = np.array([0, 100])
-#plot the bootstrap lines
-for i in range(100):
-    _ = plt.plot(x, 
-                 bs_slope_reps[i] * x + bs_intercept_reps[i],
-                 linewidth=0.5, alpha=0.2, color='red')
-#plot the data
-_ = plt.plot(df_new['plated'], df_new['wRC+'], marker='.', linestyle='none')
-#label axes, set the margins, and show the plot
-_ = plt.xlabel('plated')
-_ = plt.ylabel('BB%')
-plt.margins(0.02)
-plt.show()
