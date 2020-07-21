@@ -24,5 +24,5 @@ pgw/plated mean = 0.004112620026148256 conf int = [0.00379471 0.00442882]
 heritability = 0.005104575299609694 [0.00357444 0.00679131], p-val = 1.0
 
 
-
-Overall One Line Conclusion: plate discipline is not highly related to per game war, and there is near to zero heritability from plate discipline to per game war as well.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+One sentence conclusion: plate discipline is not highly related to per game war, and there is near to zero heritability from plate discipline to per game war as well.
