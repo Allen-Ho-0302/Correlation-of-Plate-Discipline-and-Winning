@@ -1,16 +1,25 @@
-Use data from FanGraphs/
+Introduction:
 
-Use SQL Server and Python(Spyder)/
+Try to see if plate discipline in baseball affected other stats including regular ones like BB%, K%, AVG, OBP, SLG, OPS, ISO, wOBA, wRC+, etc
 
-Use linear regression to see if plate discipline in baseball affected other stats including regular ones like BB%, K%, AVG, OBP, SLG, OPS, ISO, wOBA, wRC+, etc/
+Also see if plate discipline in baseball affected other stats like WAR per game to see how plate discipline affect winning
 
-Also see if plate discipline in baseball affected other stats like WAR per game to see how plate discipline affect winning/
+
+Methods:
+
+Data was from FanGraphs
+
+Use SQL Server and Python(Spyder)
+
+Use linear regression 
 
 Plate Discipline defined as (ZSwing%-OSwing%)/Swing%
 
-Find out the correlation coefficient, linear regression line, ratio and heritability, all of them were performed with pairs bootstrap as well, in order to analyze probabilistically and get the confidence interval of all of them.
+Find out the correlation coefficient, linear regression line, ratio and heritability, all of them were performed with pairs bootstrap as well, in order to analyze probabilistically and get the confidence interval.
 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Results:
+
 For results of relationship between plate discipline(plated) and per game war(pgw):
 
 correlation coefficient = 0.274454416886356 [0.19710456 0.3450419 ]
@@ -23,7 +32,7 @@ pgw/plated mean = 0.004112620026148256 conf int = [0.00379471 0.00442882]
 
 heritability = 0.005104575299609694 [0.00357444 0.00679131]
 
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 For results of relationship between plate discipline(plated) and BB%:
 
@@ -37,7 +46,7 @@ BB%/plated mean = 0.10289894365749544 conf int = [0.100784   0.10505148]
 
 heritability = 0.15849852437384201 [0.14896195 0.16807283]
 
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 For results of relationship between plate discipline(plated) and K%:
 
@@ -50,6 +59,11 @@ linear regression intercept = 0.15416511596940596 conf int = [0.12737901 0.18045
 K%/plated mean = 0.258099882637668 conf int = [0.24936942 0.26733477]
 
 heritability = 0.05832271453660738 [0.02381265 0.09467595]
+
+
+Conclusion:
+
+Out of pgw(per game war), BB%, K%, BB% is obviously more related to plate discipline, as shown in both correlation coefficient and heritability
 
 
 
